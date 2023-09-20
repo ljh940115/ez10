@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity5"
       layout:decorate="~{layout/basic.html}">
 
 <head>
@@ -43,12 +44,23 @@
                         <input type="text" class="form-control" th:value="${#temporals.format(dto.modDate, 'yyyy-MM-dd HH:mm:ss')}" readonly>
                     </div>
 
-                    <div class="my-4">
+<!--                    <div class="my-4">-->
+<!--                        <div class="float-end" th:with="link = ${pageRequestDTO.getLink()}">-->
+<!--                            <a th:href="|@{/board/list}?${link}|" class="text-decoration-none">-->
+<!--                                <button type="button" class="btn btn-primary">List</button>-->
+<!--                            </a>-->
+<!--                            <a th:href="|@{/board/modify(bno=${dto.bno})}&${link}|" class="text-decoration-none">-->
+<!--                                <button type="button" class="btn btn-secondary">Modify</button>-->
+<!--                            </a>-->
+<!--                        </div>-->
+<!--                    </div>-->
+<!--현재 로그인한 사용자가 작성한 게시글에만 modify가 보임-->
+                    <div class="my-4" th:with="user=${#authentication.principal}">
                         <div class="float-end" th:with="link = ${pageRequestDTO.getLink()}">
                             <a th:href="|@{/board/list}?${link}|" class="text-decoration-none">
                                 <button type="button" class="btn btn-primary">List</button>
                             </a>
-                            <a th:href="|@{/board/modify(bno=${dto.bno})}&${link}|" class="text-decoration-none">
+                            <a th:if="${user != null && user.username == dto.writer}" th:href="|@{/board/modify(bno=${dto.bno})}&${link}|" class="text-decoration-none">
                                 <button type="button" class="btn btn-secondary">Modify</button>
                             </a>
                         </div>
@@ -91,6 +103,7 @@
                     <h5 class="modal-title">Register Reply</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
+<!--
                 <div class="modal-body">
                     <div class="input-group mb-3">
                         <span class="input-group-text">Reply Text</span>
@@ -99,6 +112,18 @@
                     <div class="input-group mb-3">
                         <span class="input-group-text">Replyer</span>
                         <input type="text" class="form-control replyer" >
+                    </div>
+                </div>
+-->
+                <!--댓글 추가 시 로그인한 유저가 댓글 작성자-->
+                <div class="modal-body">
+                    <div class="input-group mb-3">
+                        <span class="input-group-text">Reply Text</span>
+                        <input type="text" class="form-control replyText" >
+                    </div>
+                    <div class="input-group mb-3"  th:with="user=${#authentication.principal}">
+                        <span class="input-group-text">Replyer</span>
+                        <input type="text" class="form-control replyer" th:value="${user.username}"  readonly>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -142,6 +167,12 @@
 
 
 <script layout:fragment="script" th:inline="javascript">
+    const currentUser = [[${#authentication.principal.username}]]
+    const modifyBtn = document.querySelector(".modifyBtn")
+    const removeBtn = document.querySelector(".removeBtn")
+    const closeModifyBtn = document.querySelector(".closeModifyBtn")
+
+    let  hasAuth = false //댓글의 작성자와 currentUser의 일치 여부
 
     const bno = [[${dto.bno}]]
 
@@ -292,12 +323,20 @@
             modifyText.value = reply.replyText
             modifyModal.show()
 
+            hasAuth = currentUser === reply.replyer //댓글의 작성자와 현재 사용자 일치 여부 확인
         }).catch(e => alert('error'))
 
     },false)
 
 
     modifyBtn.addEventListener("click", function(e) {
+
+        if(!hasAuth){
+            alert("댓글 작성자만 수정이 가능합니다.")
+            modifyModal.hide()
+            return
+        }
+
 
         const replyObj = {
             bno:bno,
@@ -338,6 +377,29 @@
         })
     },false)
 
+    removeBtn.addEventListener("click", function(e) {
+
+        if(!hasAuth){
+            alert("댓글 작성자만 삭제가 가능합니다.")
+            modifyModal.hide()
+            return
+        }
+
+
+        removeReply(replyHeader.innerHTML).then(result => {
+
+            alert(result.rno +' 댓글이 삭제되었습니다.')
+            replyText.value = ''
+            modifyModal.hide()
+
+            page = 1 // 이 부분이 없다면 원래 페이지로
+
+            printReplies(page, size)
+
+        }).catch(e => {
+            console.log(e)
+        })
+    },false)
 
 
 </script>

@@ -64,6 +64,8 @@ dependencies {
 
     implementation 'net.coobird:thumbnailator:0.4.16'
     implementation 'org.springframework.boot:spring-boot-starter-security'
+    //타임리프에서 인증 정보 활용
+    implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity5'
 
 }
 
